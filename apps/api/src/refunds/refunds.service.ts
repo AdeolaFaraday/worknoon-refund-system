@@ -3,7 +3,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PolicyService } from '../policy/policy.service';
 import { AiService } from '../ai/ai.service';
 import { CreateRefundRequestDto } from './dto/create-refund-request.dto';
-import { ActorType } from '@prisma/client';
+import { ActorType } from '../generated/prisma/enums';
+import { Prisma, OrderItem } from '../generated/prisma/client';
 import type { RefundPolicyInput } from '../policy/policy.types';
 import type { PolicyDecision } from '../policy/policy.types';
 
@@ -53,7 +54,7 @@ export class RefundsService {
       requestedAmount,
       reason,
       description,
-      items: order.orderItems.map((item) => ({
+      items: order.orderItems.map((item: OrderItem) => ({
         productName: item.productName,
         quantity: item.quantity,
         unitPrice: Number(item.unitPrice),
@@ -85,7 +86,7 @@ export class RefundsService {
     );
 
     // ── 8. Persist refund request + audit logs atomically ────────────────────
-    const refundRequest = await this.prisma.$transaction(async (tx) => {
+    const refundRequest = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const created = await tx.refundRequest.create({
         data: {
           customerId,

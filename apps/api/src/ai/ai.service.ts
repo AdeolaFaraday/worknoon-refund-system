@@ -76,9 +76,9 @@ Based on the above, provide your analysis and response in the requested JSON for
 
       const text = response.text;
       if (!text) {
-          throw new Error("Empty response from AI");
+        throw new Error("Empty response from AI");
       }
-      
+
       const parsed = JSON.parse(text);
 
       if (
