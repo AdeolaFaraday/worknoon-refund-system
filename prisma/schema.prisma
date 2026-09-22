@@ -1,0 +1,112 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Customer {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders         Order[]
+  refundRequests RefundRequest[]
+}
+
+enum OrderStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+model Order {
+  id          String      @id @default(uuid()) @db.Uuid
+  orderNumber String      @unique
+  customerId  String      @db.Uuid
+  orderDate   DateTime
+  totalAmount Decimal     @db.Decimal(10, 2)
+  status      OrderStatus
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  customer       Customer        @relation(fields: [customerId], references: [id])
+  orderItems     OrderItem[]
+  refundRequests RefundRequest[]
+
+  @@index([customerId])
+}
+
+model OrderItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  orderId     String   @db.Uuid
+  productName String
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  isFinalSale Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id])
+
+  @@index([orderId])
+}
+
+enum RefundStatus {
+  PENDING
+  APPROVED
+  DENIED
+  ESCALATED
+}
+
+model RefundRequest {
+  id               String       @id @default(uuid()) @db.Uuid
+  customerId       String       @db.Uuid
+  orderId          String       @db.Uuid
+  reason           String
+  description      String
+  requestedAmount  Decimal      @db.Decimal(10, 2)
+  status           RefundStatus @default(PENDING)
+  policyReasons    String?      // JSON array — deterministic policy reasons
+  policyRules      String?      // JSON array — matched rule identifiers
+  aiClassification String?      // Reserved for future LLM layer
+  aiReasoning      String?      // Reserved for future LLM layer
+  finalDecision    String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  customer   Customer   @relation(fields: [customerId], references: [id])
+  order      Order      @relation(fields: [orderId], references: [id])
+  auditLogs  AuditLog[]
+
+  @@index([customerId])
+  @@index([orderId])
+  @@index([status])
+}
+
+enum ActorType {
+  SYSTEM
+  CUSTOMER
+  ADMIN
+  AI
+}
+
+model AuditLog {
+  id              String    @id @default(uuid()) @db.Uuid
+  refundRequestId String    @db.Uuid
+  event           String
+  actor           ActorType
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+
+  refundRequest RefundRequest @relation(fields: [refundRequestId], references: [id])
+
+  @@index([refundRequestId])
+}
