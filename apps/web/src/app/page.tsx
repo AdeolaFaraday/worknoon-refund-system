@@ -1,13 +1,20 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, ShieldCheck, Bot, Users } from 'lucide-react';
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'Worknoon Refund System',
-  description: 'Submit and track refund requests for your Worknoon orders.',
-};
+import { GlowButton } from '@/components/ui/GlowButton';
 
 export default function HomePage() {
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+
+  useEffect(() => {
+    const auth = localStorage.getItem('worknoon_admin_auth');
+    if (auth === 'true') {
+      setIsAdmin(true);
+    }
+  }, []);
+
   return (
     <main className="min-h-screen flex flex-col">
       {/* Header */}
@@ -20,15 +27,21 @@ export default function HomePage() {
             <span className="font-semibold text-slate-900">Worknoon</span>
           </div>
           <nav className="flex items-center gap-4">
-            <Link href="/customer" className="text-sm text-slate-600 hover:text-slate-900 transition-colors">
-              Customer Portal
-            </Link>
-            <Link
-              href="/admin"
-              className="text-sm font-medium text-white bg-slate-900 px-3.5 py-1.5 rounded-lg hover:bg-slate-700 transition-colors"
-            >
-              Admin Dashboard
-            </Link>
+            {isAdmin ? (
+              <Link
+                href="/admin"
+                className="text-sm font-medium text-white bg-slate-900 px-3.5 py-1.5 rounded-lg hover:bg-slate-700 transition-colors"
+              >
+                Admin Dashboard
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="text-sm font-medium text-slate-700 bg-slate-100 px-3.5 py-1.5 rounded-lg hover:bg-slate-200 transition-colors"
+              >
+                Admin Login
+              </Link>
+            )}
           </nav>
         </div>
       </header>
@@ -47,21 +60,11 @@ export default function HomePage() {
             Deterministic policy engine combined with Gemini AI decision support for fast, fair, and consistent refund decisions.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/customer"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
-            >
+          <div className="flex justify-center">
+            <GlowButton href="/customer" innerClassName="px-8 py-3.5 text-base gap-3 rounded-full">
               Submit a Refund Request
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-            <Link
-              href="/admin"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white text-slate-700 font-semibold rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm"
-            >
-              <Users className="w-4 h-4" />
-              Support Dashboard
-            </Link>
+              <ArrowRight className="w-5 h-5" />
+            </GlowButton>
           </div>
         </div>
       </section>

@@ -1,5 +1,7 @@
 'use client';
 
+import React from 'react';
+
 import Link from 'next/link';
 import { useAdminRefund } from '@/hooks/useRefundQueries';
 import { StatusBadge } from '@/components/ui/StatusBadge';
@@ -13,7 +15,7 @@ interface RefundDetailViewProps {
   id: string;
 }
 
-function Section({ title, Icon, children }: { title: string; Icon: React.ElementType; children: React.ReactNode }) {
+const Section = React.memo(function Section({ title, Icon, children }: { title: string; Icon: React.ElementType; children: React.ReactNode }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
       <div className="flex items-center gap-2.5 px-5 py-4 border-b border-slate-100 bg-slate-50/60">
@@ -23,16 +25,16 @@ function Section({ title, Icon, children }: { title: string; Icon: React.Element
       <div className="p-5">{children}</div>
     </div>
   );
-}
+});
 
-function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
+const InfoRow = React.memo(function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-start gap-1 py-2.5 border-b border-slate-100 last:border-0">
       <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide sm:w-40 flex-shrink-0">{label}</dt>
       <dd className="text-sm text-slate-900">{children}</dd>
     </div>
   );
-}
+});
 
 export function RefundDetailView({ id }: RefundDetailViewProps) {
   const { data: refund, isLoading, isError, refetch } = useAdminRefund(id);

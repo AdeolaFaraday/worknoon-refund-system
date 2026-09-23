@@ -15,6 +15,7 @@ export class AiService {
 
   constructor() {
     const apiKey = process.env.GEMINI_API_KEY || "";
+    console.log({ apiKey });
     if (apiKey) {
       this.ai = new GoogleGenAI({ apiKey });
     } else {

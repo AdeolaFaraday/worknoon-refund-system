@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, FileText, Users, Zap } from 'lucide-react';
+import { LayoutDashboard, FileText, Users, Zap, LogOut } from 'lucide-react';
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', Icon: LayoutDashboard, exact: true },
@@ -44,7 +44,7 @@ export function AdminNav() {
         })}
       </nav>
 
-      <div className="px-6 py-4 border-t border-slate-700/50">
+      <div className="px-6 py-4 border-t border-slate-700/50 space-y-4">
         <Link
           href="/customer"
           className="flex items-center gap-2 text-xs text-slate-500 hover:text-slate-300 transition-colors"
@@ -52,6 +52,16 @@ export function AdminNav() {
           <Users className="w-3.5 h-3.5" />
           Switch to Customer Portal
         </Link>
+        <button
+          onClick={() => {
+            localStorage.removeItem('worknoon_admin_auth');
+            window.location.href = '/login';
+          }}
+          className="flex items-center gap-2 text-xs text-slate-500 hover:text-red-400 transition-colors w-full text-left"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          Logout
+        </button>
       </div>
     </aside>
   );
