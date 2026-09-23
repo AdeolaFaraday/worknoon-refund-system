@@ -36,7 +36,7 @@ export function useRefundForm() {
     return customerOrders?.map((o) => ({
       label: o.orderNumber,
       value: o.orderNumber,
-      description: `$${parseFloat(o.totalAmount).toFixed(2)} - ${new Date(o.orderDate).toLocaleDateString()}`,
+      description: `${new Date(o.orderDate).toLocaleDateString()}`,
     })) || [];
   }, [customerOrders]);
 

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PolicyService } from '../policy/policy.service';
 import { AiService } from '../ai/ai.service';
@@ -42,12 +42,22 @@ export class RefundsService {
       throw new BadRequestException('Order does not belong to the specified customer');
     }
 
-    // ── 3. Basic amount sanity check ────────────────────────────────────────
+    // ── 3. Check for an existing refund on this order ────────────────────────
+    const existingRefund = await this.prisma.refundRequest.findFirst({
+      where: { orderId: order.id },
+    });
+    if (existingRefund) {
+      throw new ConflictException(
+        'A refund request has already been submitted for this order. Please contact support if you need further assistance.',
+      );
+    }
+
+    // ── 4. Basic amount sanity check ────────────────────────────────────────
     if (requestedAmount > Number(order.totalAmount)) {
       throw new BadRequestException('Requested amount cannot exceed order total');
     }
 
-    // ── 4. Build trusted PolicyInput from DB data (NOT from DTO fields) ─────
+    // ── 5. Build trusted PolicyInput from DB data (NOT from DTO fields) ─────
     const policyInput: RefundPolicyInput = {
       orderDate: order.orderDate,
       orderStatus: order.status,
@@ -62,10 +72,10 @@ export class RefundsService {
       })),
     };
 
-    // ── 5. Run the deterministic policy engine ──────────────────────────────
+    // ── 6. Run the deterministic policy engine ──────────────────────────────
     const policyResult = this.policy.evaluateRefund(policyInput);
 
-    // ── 6. Run AI decision support (non-blocking; errors fall back to policy)
+    // ── 7. Run AI decision support (non-blocking; errors fall back to policy)
     const aiResult = await this.ai.evaluateRefundSupport(policyInput, policyResult);
 
     if (aiResult) {
@@ -74,7 +84,7 @@ export class RefundsService {
       this.logger.log(`AI evaluation skipped or failed — using policy decision: ${policyResult.decision}`);
     }
 
-    // ── 7. Determine the final decision ─────────────────────────────────────
+    // ── 8. Determine the final decision ─────────────────────────────────────
     // The backend owns the final decision. The policy engine's hard rules are always authoritative.
     //   - Policy DENIED   → Final MUST be DENIED (no AI override)
     //   - Policy ESCALATED → Final MUST be ESCALATED (no AI override)
@@ -85,7 +95,7 @@ export class RefundsService {
       aiResult?.classification ?? null,
     );
 
-    // ── 8. Persist refund request + audit logs atomically ────────────────────
+    // ── 9. Persist refund request + audit logs atomically ────────────────────
     const refundRequest = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const created = await tx.refundRequest.create({
         data: {
@@ -159,7 +169,7 @@ export class RefundsService {
       return created;
     });
 
-    // ── 9. Return clean, frontend-friendly response ──────────────────────────
+    // ── 10. Return clean, frontend-friendly response ──────────────────────────
     return {
       id: refundRequest.id,
       finalDecision,

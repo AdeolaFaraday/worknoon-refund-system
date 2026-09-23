@@ -1,7 +1,6 @@
 'use client';
 
 import { REFUND_REASONS } from '@/lib/schemas';
-import { formatCurrency } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { XCircle } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
@@ -98,17 +97,12 @@ export function RefundRequestForm() {
                     <p className="text-xs text-slate-400">Qty: {item.quantity}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-medium text-slate-800">{formatCurrency(item.unitPrice)}</p>
                     {item.isFinalSale && (
                       <p className="text-xs text-red-500 font-medium">Final Sale</p>
                     )}
                   </div>
                 </div>
               ))}
-            </div>
-            <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-slate-100">
-              <p className="text-sm font-semibold text-slate-700">Order Total</p>
-              <p className="text-sm font-bold text-slate-900">{formatCurrency(selectedOrder.totalAmount)}</p>
             </div>
           </div>
         )}
@@ -131,11 +125,6 @@ export function RefundRequestForm() {
               error={!!errors.requestedAmount}
             />
           </div>
-          {selectedOrder && (
-            <p className="mt-1.5 text-xs text-slate-400">
-              Maximum: {formatCurrency(selectedOrder.totalAmount)}
-            </p>
-          )}
           <FieldError message={errors.requestedAmount?.message} />
         </div>
 

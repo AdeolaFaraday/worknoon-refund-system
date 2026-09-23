@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PolicyService } from '../policy/policy.service';
 import { AiService } from '../ai/ai.service';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { RuleName } from 'src/policy/policy.constants';
 
 // ── Shared fixtures ──────────────────────────────────────────────────────────
 
@@ -27,25 +28,25 @@ const baseOrder = {
 const approvedPolicyResult = {
   decision: 'APPROVED' as const,
   reasons: ['The item was reported as damaged or defective.'],
-  matchedRules: ['DAMAGED_ITEM'],
+  matchedRules: ['DAMAGED_ITEM'] as RuleName[],
 };
 
 const deniedPolicyResult = {
   decision: 'DENIED' as const,
   reasons: ['The following item(s) are marked as final sale.'],
-  matchedRules: ['FINAL_SALE'],
+  matchedRules: ['FINAL_SALE'] as RuleName[],
 };
 
 const escalatedPolicyResult = {
   decision: 'ESCALATED' as const,
   reasons: ['Refund requests exceeding $500 require human review.'],
-  matchedRules: ['HIGH_VALUE'],
+  matchedRules: ['HIGH_VALUE'] as RuleName[],
 };
 
 const suspiciousPolicyResult = {
   decision: 'ESCALATED' as const,
   reasons: ['The description contains contradictory statements.'],
-  matchedRules: ['SUSPICIOUS'],
+  matchedRules: ['SUSPICIOUS'] as RuleName[],
 };
 
 const mockAiApproved = {
@@ -359,8 +360,8 @@ describe('RefundsService', () => {
 
   it('8. Final decision never overrides a DENIED policy decision regardless of AI output', async () => {
     const deniedVariants = [
-      { decision: 'DENIED' as const, reasons: ['Final sale'], matchedRules: ['FINAL_SALE'] },
-      { decision: 'DENIED' as const, reasons: ['Outside window'], matchedRules: ['OUTSIDE_WINDOW'] },
+      { decision: 'DENIED' as const, reasons: ['Final sale'], matchedRules: ['FINAL_SALE'] as RuleName[] },
+      { decision: 'DENIED' as const, reasons: ['Outside window'], matchedRules: ['OUTSIDE_WINDOW'] as RuleName[] },
     ];
     const aiVariants = [mockAiApproved, mockAiEscalated, null];
 
