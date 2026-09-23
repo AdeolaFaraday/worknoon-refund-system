@@ -4,11 +4,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { refundFormSchema, RefundFormValues } from '@/lib/schemas';
 import { useSearchCustomers, useCustomerOrders, useSubmitRefund } from '@/hooks/useRefundQueries';
 import { CreateRefundResponse } from '@/types/api';
+import { useDebounce } from '@/hooks/useDebounce';
 
 export function useRefundForm() {
   const [result, setResult] = useState<CreateRefundResponse | null>(null);
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
-
+  const debouncedSearch = useDebounce(customerSearchQuery, 500);
   const form = useForm<RefundFormValues>({
     resolver: zodResolver(refundFormSchema) as any,
     defaultValues: { requestedAmount: undefined },
@@ -18,9 +19,9 @@ export function useRefundForm() {
   const selectedCustomerId = watch('customerId');
   const selectedOrderNumber = watch('orderNumber');
 
-  const { data: searchResults, isLoading: loadingCustomers } = useSearchCustomers(customerSearchQuery);
+  const { data: searchResults, isLoading: loadingCustomers } = useSearchCustomers(debouncedSearch);
   const { data: customerOrders, isLoading: loadingCustomer } = useCustomerOrders(selectedCustomerId ?? null);
-  
+
   const submitMutation = useSubmitRefund();
 
   const customerOptions = useMemo(() => {

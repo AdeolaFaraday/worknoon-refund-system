@@ -109,8 +109,8 @@ export function RefundRequestList() {
               key={s}
               onClick={() => handleStatusChange(s)}
               className={`px-3 py-2 text-xs font-medium rounded-lg transition-colors ${statusFilter === s
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
                 }`}
             >
               {s === 'ALL' ? 'All' : s.charAt(0) + s.slice(1).toLowerCase()}
@@ -129,6 +129,10 @@ export function RefundRequestList() {
         <Table
           data={data}
           columns={columns}
+          page={page}
+          totalPages={totalPages}
+          onNextPage={handleNextPage}
+          onPrevPage={handlePrevPage}
           keyExtractor={(item) => item.id}
           onRowClick={(item) => router.push(`/admin/refunds/${item.id}`)}
           emptyState={
@@ -141,32 +145,6 @@ export function RefundRequestList() {
             </div>
           }
         />
-      </div>
-
-      {/* Pagination */}
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-slate-400">
-          Showing {data.length > 0 ? (page - 1) * 10 + 1 : 0} to {Math.min(page * 10, total)} of {total} requests
-        </p>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handlePrevPage}
-            disabled={page === 1}
-            className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Previous
-          </button>
-          <span className="text-xs text-slate-600 font-medium px-2">
-            Page {page} of {totalPages || 1}
-          </span>
-          <button
-            onClick={handleNextPage}
-            disabled={page >= totalPages}
-            className="px-3 py-1.5 text-xs font-medium bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Next
-          </button>
-        </div>
       </div>
     </div>
   );
