@@ -1,37 +1,36 @@
 'use client';
 
-import { useAdminRefunds } from '@/hooks/useRefundQueries';
+import { useAdminRefunds, useAdminRefundStats } from '@/hooks/useRefundQueries';
 import { DataCard } from '@/components/ui/DataCard';
 import { LoadingState } from '@/components/ui/LoadingState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import Link from 'next/link';
-import type { RefundStatus } from '@/types/api';
 
 export function AdminDashboardContent() {
-  const { data, isLoading, isError, refetch } = useAdminRefunds();
+  const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = useAdminRefundStats();
+  // Fetch first page, limited to 5 for recent activity
+  const { data: recentRes, isLoading: recentLoading, isError: recentError, refetch: refetchRecent } = useAdminRefunds(1, 5);
 
-  const counts = data
-    ? (['APPROVED', 'DENIED', 'ESCALATED', 'PENDING'] as RefundStatus[]).reduce(
-        (acc, status) => {
-          acc[status] = data.filter((r) => r.status === status).length;
-          return acc;
-        },
-        {} as Record<RefundStatus, number>,
-      )
-    : null;
+  const isLoading = statsLoading || recentLoading;
+  const isError = statsError || recentError;
+
+  const handleRetry = () => {
+    refetchStats();
+    refetchRecent();
+  };
 
   if (isLoading) return <LoadingState message="Loading dashboard data…" />;
-  if (isError) return <ErrorState message="Failed to load dashboard data" onRetry={() => refetch()} />;
-  if (!data || !counts) return null;
+  if (isError) return <ErrorState message="Failed to load dashboard data" onRetry={handleRetry} />;
+  if (!stats || !recentRes) return null;
 
   return (
     <>
       {/* Summary cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <DataCard label="Total Requests" value={data.length} sub="All time" />
-        <DataCard label="Approved" value={counts.APPROVED} sub="Automatically approved" className="border-emerald-200" />
-        <DataCard label="Denied" value={counts.DENIED} sub="Policy blocked" className="border-red-200" />
-        <DataCard label="Escalated" value={counts.ESCALATED} sub="Requires review" className="border-amber-200" />
+        <DataCard label="Total Requests" value={stats.total} sub="All time" />
+        <DataCard label="Approved" value={stats.APPROVED} sub="Automatically approved" className="border-emerald-200" />
+        <DataCard label="Denied" value={stats.DENIED} sub="Policy blocked" className="border-red-200" />
+        <DataCard label="Escalated" value={stats.ESCALATED} sub="Requires review" className="border-amber-200" />
       </div>
 
       {/* Recent activity */}
@@ -43,7 +42,7 @@ export function AdminDashboardContent() {
           </Link>
         </div>
         <div className="divide-y divide-slate-50">
-          {data.slice(0, 5).map((refund) => (
+          {recentRes.data.map((refund) => (
             <Link
               key={refund.id}
               href={`/admin/refunds/${refund.id}`}

@@ -1,16 +1,15 @@
 'use client';
 
 import React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useCustomers, useCustomer, useOrder, useSubmitRefund } from '@/hooks/useRefundQueries';
-import { refundFormSchema, RefundFormValues, REFUND_REASONS } from '@/lib/schemas';
-import { formatCurrency, formatDateShort } from '@/lib/utils';
+import { REFUND_REASONS } from '@/lib/schemas';
+import { formatCurrency } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/StatusBadge';
-import { LoadingSpinner } from '@/components/ui/LoadingState';
 import { CreateRefundResponse } from '@/types/api';
-import { CheckCircle2, XCircle, AlertTriangle, ChevronDown, Info } from 'lucide-react';
-import { useState } from 'react';
+import { CheckCircle2, XCircle, AlertTriangle, Info, ChevronDown } from 'lucide-react';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import { SearchableSelect } from '@/components/ui/SearchableSelect';
+import { useRefundForm } from './hooks/useRefundForm';
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -44,13 +43,11 @@ function ResultDisplay({ result }: { result: CreateRefundResponse }) {
         </div>
       </div>
 
-      {/* Customer response */}
       <div className="rounded-xl bg-white border border-slate-200 p-5 shadow-sm mb-6">
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Message</p>
         <p className="text-sm text-slate-700 leading-relaxed">{result.customerResponse}</p>
       </div>
 
-      {/* Policy reasons */}
       {result.policyReasons.length > 0 && (
         <div className="rounded-xl bg-white border border-slate-200 p-5 shadow-sm mb-4">
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Details</p>
@@ -73,47 +70,32 @@ function ResultDisplay({ result }: { result: CreateRefundResponse }) {
 }
 
 export function RefundRequestForm() {
-  const [result, setResult] = useState<CreateRefundResponse | null>(null);
-
   const {
-    register,
-    handleSubmit,
-    control,
-    watch,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<RefundFormValues>({
-    resolver: zodResolver(refundFormSchema) as any,
-    defaultValues: { requestedAmount: undefined },
-  });
+    form,
+    result,
+    onSubmit,
+    handleReset,
+    setCustomerSearchQuery,
+    customerOptions,
+    orderOptions,
+    selectedOrder,
+    loadingCustomers,
+    loadingCustomer,
+    submitMutation,
+    selectedCustomerId,
+    selectedOrderNumber,
+    setValue,
+  } = useRefundForm();
 
-  const selectedCustomerId = watch('customerId');
-  const selectedOrderNumber = watch('orderNumber');
-
-  const { data: customers, isLoading: loadingCustomers } = useCustomers();
-  const { data: customer, isLoading: loadingCustomer } = useCustomer(selectedCustomerId ?? null);
-  const { data: order, isLoading: loadingOrder } = useOrder(selectedOrderNumber ?? null);
-  const submitMutation = useSubmitRefund();
-
-  const onSubmit = async (values: RefundFormValues) => {
-    try {
-      const response = await submitMutation.mutateAsync(values);
-      setResult(response);
-    } catch (err) {
-      // Error displayed inline via submitMutation.error
-    }
-  };
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = form;
 
   if (result) {
     return (
       <div className="space-y-6">
         <ResultDisplay result={result} />
-        <button
-          onClick={() => { setResult(null); reset(); }}
-          className="w-full py-3 px-4 rounded-xl border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        >
+        <Button onClick={handleReset} className="!bg-white !text-slate-700 border border-slate-300 hover:!bg-slate-50">
           Submit another request
-        </button>
+        </Button>
       </div>
     );
   }
@@ -124,80 +106,66 @@ export function RefundRequestForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
       {/* Step 1: Select Customer */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/60">
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/60 rounded-t-xl">
           <p className="text-sm font-semibold text-slate-700">
             <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-xs font-bold mr-2">1</span>
             Your Information
           </p>
         </div>
         <div className="p-5">
-          <label className="block text-xs font-medium text-slate-600 mb-1.5" htmlFor="customerId">
-            Select your account
+          <label className="block text-xs font-medium text-slate-600 mb-1.5">
+            Search for your account (email or ID)
           </label>
-          <div className="relative">
-            <select id="customerId" {...register('customerId')} className={selectCls} disabled={loadingCustomers}>
-              <option value="">
-                {loadingCustomers ? 'Loading customers…' : '— Select a customer —'}
-              </option>
-              {customers?.map((c) => (
-                <option key={c.id} value={c.id}>{c.name} ({c.email})</option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-          </div>
+          <SearchableSelect
+            options={customerOptions}
+            value={selectedCustomerId || ''}
+            onChange={(val) => {
+              setValue('customerId', val, { shouldValidate: true });
+              setValue('orderNumber', '', { shouldValidate: true }); // reset order
+            }}
+            onSearch={setCustomerSearchQuery}
+            placeholder="Type at least 3 characters..."
+            isLoading={loadingCustomers}
+            error={!!errors.customerId}
+          />
           <FieldError message={errors.customerId?.message} />
-
-          {customer && (
-            <div className="mt-3 rounded-lg bg-indigo-50 border border-indigo-100 p-3 text-xs text-indigo-700">
-              <span className="font-medium">{customer.name}</span> · {customer.email} · {customer.orders.length} orders
-            </div>
-          )}
         </div>
       </div>
 
       {/* Step 2: Select Order */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/60">
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/60 rounded-t-xl">
           <p className="text-sm font-semibold text-slate-700">
             <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-xs font-bold mr-2">2</span>
             Select Order
           </p>
         </div>
         <div className="p-5">
-          <label className="block text-xs font-medium text-slate-600 mb-1.5" htmlFor="orderNumber">
+          <label className="block text-xs font-medium text-slate-600 mb-1.5">
             Order
           </label>
-          <div className="relative">
-            <select
-              id="orderNumber"
-              {...register('orderNumber')}
-              className={selectCls}
-              disabled={!selectedCustomerId || loadingCustomer}
-            >
-              <option value="">
-                {!selectedCustomerId ? 'Select a customer first' : loadingCustomer ? 'Loading orders…' : '— Select an order —'}
-              </option>
-              {customer?.orders.map((o) => (
-                <option key={o.orderNumber} value={o.orderNumber}>
-                  {o.orderNumber} — {formatCurrency(o.totalAmount)} ({formatDateShort(o.orderDate)})
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-          </div>
+          <SearchableSelect
+            options={orderOptions}
+            value={selectedOrderNumber || ''}
+            onChange={(val) => setValue('orderNumber', val, { shouldValidate: true })}
+            placeholder={!selectedCustomerId ? 'Select a customer first' : 'Search orders...'}
+            disabled={!selectedCustomerId || loadingCustomer}
+            isLoading={loadingCustomer}
+            error={!!errors.orderNumber}
+          />
           <FieldError message={errors.orderNumber?.message} />
 
-          {selectedOrderNumber && order && (
+          {selectedOrderNumber && selectedOrder && (
             <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 overflow-hidden">
               <div className="px-4 py-3 border-b border-slate-100">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold text-slate-600">Order Summary</p>
-                  <StatusBadge status={order.status} size="sm" />
+                  <StatusBadge status={selectedOrder.status} size="sm" />
                 </div>
               </div>
               <div className="divide-y divide-slate-100">
-                {order.orderItems.map((item) => (
+                {selectedOrder.orderItems.map((item: any) => (
                   <div key={item.id} className="flex items-center justify-between px-4 py-2.5">
                     <div>
                       <p className="text-sm text-slate-800">{item.productName}</p>
@@ -214,55 +182,48 @@ export function RefundRequestForm() {
               </div>
               <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-slate-100">
                 <p className="text-sm font-semibold text-slate-700">Order Total</p>
-                <p className="text-sm font-bold text-slate-900">{formatCurrency(order.totalAmount)}</p>
+                <p className="text-sm font-bold text-slate-900">{formatCurrency(selectedOrder.totalAmount)}</p>
               </div>
-            </div>
-          )}
-          {loadingOrder && selectedOrderNumber && (
-            <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
-              <LoadingSpinner size="sm" />
-              Loading order details…
             </div>
           )}
         </div>
       </div>
 
       {/* Step 3: Refund Details */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/60">
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/60 rounded-t-xl">
           <p className="text-sm font-semibold text-slate-700">
             <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600 text-white text-xs font-bold mr-2">3</span>
             Refund Details
           </p>
         </div>
         <div className="p-5 space-y-5">
-          {/* Requested Amount */}
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1.5" htmlFor="requestedAmount">
               Refund Amount (USD)
             </label>
             <div className="relative">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
-              <input
+              <Input
                 id="requestedAmount"
                 type="number"
                 step="0.01"
                 min="0.01"
                 placeholder="0.00"
                 {...register('requestedAmount', { valueAsNumber: true })}
-                className={`${inputCls} pl-7`}
+                className="pl-7"
                 disabled={!selectedOrderNumber}
+                error={!!errors.requestedAmount}
               />
             </div>
-            {order && (
+            {selectedOrder && (
               <p className="mt-1.5 text-xs text-slate-400">
-                Maximum: {formatCurrency(order.totalAmount)}
+                Maximum: {formatCurrency(selectedOrder.totalAmount)}
               </p>
             )}
             <FieldError message={errors.requestedAmount?.message} />
           </div>
 
-          {/* Reason */}
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1.5" htmlFor="reason">
               Reason for Return
@@ -279,7 +240,6 @@ export function RefundRequestForm() {
             <FieldError message={errors.reason?.message} />
           </div>
 
-          {/* Description */}
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1.5" htmlFor="description">
               Please describe your issue
@@ -290,14 +250,13 @@ export function RefundRequestForm() {
               placeholder="Please provide as much detail as possible about the issue with your order…"
               {...register('description')}
               disabled={!selectedOrderNumber}
-              className={`${inputCls} resize-none`}
+              className={`${inputCls} resize-none ${errors.description ? 'border-red-500' : ''}`}
             />
             <FieldError message={errors.description?.message} />
           </div>
         </div>
       </div>
 
-      {/* API Error */}
       {submitMutation.isError && (
         <div className="rounded-xl bg-red-50 border border-red-200 p-4 flex items-start gap-3">
           <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
@@ -312,21 +271,13 @@ export function RefundRequestForm() {
         </div>
       )}
 
-      {/* Submit */}
-      <button
+      <Button
         type="submit"
         disabled={isSubmitting || submitMutation.isPending}
-        className="w-full py-3.5 px-6 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm flex items-center justify-center gap-2"
+        isLoading={submitMutation.isPending}
       >
-        {submitMutation.isPending ? (
-          <>
-            <LoadingSpinner size="sm" />
-            Submitting…
-          </>
-        ) : (
-          'Submit Refund Request'
-        )}
-      </button>
+        Submit Refund Request
+      </Button>
     </form>
   );
 }

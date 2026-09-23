@@ -9,4 +9,9 @@ export class OrdersController {
   findOne(@Param('orderNumber') orderNumber: string) {
     return this.ordersService.findByOrderNumber(orderNumber);
   }
+
+  @Get('customer/:customerId')
+  findByCustomer(@Param('customerId') customerId: string) {
+    return this.ordersService.findByCustomerId(customerId);
+  }
 }

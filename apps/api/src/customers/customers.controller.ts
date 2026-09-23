@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { CustomersService } from './customers.service';
 
 @Controller('customers')
@@ -8,6 +8,11 @@ export class CustomersController {
   @Get()
   findAll() {
     return this.customersService.findAll();
+  }
+
+  @Get('search')
+  search(@Query('query') query: string) {
+    return this.customersService.search(query || '');
   }
 
   @Get(':id')

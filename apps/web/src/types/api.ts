@@ -12,6 +12,21 @@ export interface Customer {
   updatedAt: string;
 }
 
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface AdminRefundStats {
+  APPROVED: number;
+  DENIED: number;
+  ESCALATED: number;
+  PENDING: number;
+  total: number;
+}
+
 export interface CustomerWithOrders extends Customer {
   orders: Order[];
   refundRequests: RefundRequestSummary[];

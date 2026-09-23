@@ -21,4 +21,13 @@ export class OrdersService {
 
     return order;
   }
+  async findByCustomerId(customerId: string) {
+    return this.prisma.order.findMany({
+      where: { customerId },
+      include: {
+        orderItems: true,
+      },
+      orderBy: { orderDate: 'desc' },
+    });
+  }
 }

@@ -11,6 +11,23 @@ export class CustomersService {
     });
   }
 
+  async search(query: string) {
+    if (!query || query.length < 3) return [];
+    
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(query);
+
+    return this.prisma.customer.findMany({
+      where: {
+        OR: [
+          ...(isUuid ? [{ id: { equals: query } }] : []),
+          { email: { contains: query, mode: 'insensitive' } },
+        ],
+      },
+      take: 10,
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async findOne(id: string) {
     const customer = await this.prisma.customer.findUnique({
       where: { id },
